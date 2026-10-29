@@ -1,0 +1,602 @@
+{
+  "edges" : [
+    {
+      "from" : "SessionStore",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Session",
+      "weight" : 1
+    },
+    {
+      "from" : "AuthRepositoryImpl",
+      "kind" : "extends",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "AuthRepository",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "api",
+          "via" : "init"
+        }
+      ],
+      "from" : "AuthRepositoryImpl",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "AuthAPI",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "store",
+          "via" : "init"
+        }
+      ],
+      "from" : "AuthRepositoryImpl",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "SessionStore",
+      "weight" : 1
+    },
+    {
+      "from" : "AuthRepositoryImpl",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "AuthAPI",
+      "weight" : 1
+    },
+    {
+      "from" : "AuthRepositoryImpl",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "SessionStore",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "repository",
+          "via" : "init"
+        }
+      ],
+      "from" : "LoginUseCase",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "AuthRepository",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginUseCase",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "AuthRepository",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "assembly",
+          "via" : "init"
+        }
+      ],
+      "from" : "LoginCoordinator",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginAssembly",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginCoordinator",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginAssembly",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginView",
+      "kind" : "implements",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "View",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginView",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginViewModel",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginForm",
+      "kind" : "implements",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "View",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginForm",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginUiState",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginViewModel",
+      "kind" : "extends",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "ObservableObject",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "useCase",
+          "via" : "init"
+        }
+      ],
+      "from" : "LoginViewModel",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginUseCase",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginViewModel",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginUiState",
+      "weight" : 1
+    },
+    {
+      "from" : "LoginViewModel",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "LoginUseCase",
+      "weight" : 1
+    }
+  ],
+  "external_nodes" : [
+    {
+      "id" : "View",
+      "name" : "View",
+      "origin" : "library"
+    },
+    {
+      "id" : "ObservableObject",
+      "name" : "ObservableObject",
+      "origin" : "library"
+    }
+  ],
+  "legend" : {
+    "edge_kinds" : {
+      "calls" : "reserved — not extracted in this version (needs a call-graph index)",
+      "depends_on" : "collaborator received through an initializer parameter",
+      "extends" : "subclass of (superclass only, first inherited type on a class)",
+      "implements" : "protocol conformance",
+      "instantiates" : "reserved — not extracted in this version",
+      "uses_type" : "the type appears in a stored property"
+    },
+    "external_nodes.origin" : "this version marks every unresolved type as \"library\" — it does not yet cross-reference other modules to tell project types apart from framework ones",
+    "provenance" : {
+      "ast" : "read from the module's syntax tree (swift-syntax)"
+    },
+    "visibility" : "if absent, the declaration is internal (Swift's default)",
+    "weight" : "number of aggregated occurrences on the edge"
+  },
+  "module" : {
+    "dir" : "\/Users\/astralcollar\/AndroidStudioProjects\/ios-module-map\/Fixtures\/Login",
+    "name" : "Login",
+    "type" : "spm-or-folder"
+  },
+  "nodes" : [
+    {
+      "doc" : "Wires the Login feature's dependency graph.",
+      "file" : "DI\/LoginAssembly.swift",
+      "functions" : [
+        {
+          "name" : "resolveLoginUseCase",
+          "signature" : "func resolveLoginUseCase(api: AuthAPI) -> LoginUseCase"
+        }
+      ],
+      "id" : "LoginAssembly",
+      "kind" : "class",
+      "lines" : [
+        4,
+        10
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "LoginAssembly",
+      "role" : "di_module",
+      "swift_kind" : "class"
+    },
+    {
+      "file" : "Data\/AuthRepositoryImpl.swift",
+      "functions" : [
+        {
+          "name" : "login",
+          "signature" : "func login(email: String, password: String) async throws -> (token: String, userId: Int)"
+        }
+      ],
+      "id" : "AuthAPI",
+      "kind" : "interface",
+      "lines" : [
+        3,
+        5
+      ],
+      "name" : "AuthAPI",
+      "role" : "api_service",
+      "swift_kind" : "protocol"
+    },
+    {
+      "file" : "Data\/AuthRepositoryImpl.swift",
+      "functions" : [
+        {
+          "name" : "save",
+          "signature" : "func save(_ session: Session)"
+        },
+        {
+          "name" : "clear",
+          "signature" : "func clear()"
+        }
+      ],
+      "id" : "SessionStore",
+      "kind" : "class",
+      "lines" : [
+        7,
+        17
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "SessionStore",
+      "properties" : [
+        {
+          "mutable" : true,
+          "name" : "current",
+          "type" : "Session?",
+          "visibility" : "private"
+        }
+      ],
+      "swift_kind" : "class"
+    },
+    {
+      "constructor" : [
+        {
+          "name" : "api",
+          "type" : "AuthAPI"
+        },
+        {
+          "name" : "store",
+          "type" : "SessionStore"
+        }
+      ],
+      "file" : "Data\/AuthRepositoryImpl.swift",
+      "functions" : [
+        {
+          "name" : "login",
+          "signature" : "func login(email: String, password: String) async throws -> Session"
+        },
+        {
+          "name" : "logout",
+          "signature" : "func logout() async throws"
+        }
+      ],
+      "id" : "AuthRepositoryImpl",
+      "kind" : "class",
+      "lines" : [
+        19,
+        38
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "AuthRepositoryImpl",
+      "properties" : [
+        {
+          "name" : "api",
+          "type" : "AuthAPI",
+          "visibility" : "private"
+        },
+        {
+          "name" : "store",
+          "type" : "SessionStore",
+          "visibility" : "private"
+        }
+      ],
+      "role" : "repository",
+      "supertypes" : [
+        "AuthRepository"
+      ],
+      "swift_kind" : "class"
+    },
+    {
+      "file" : "Domain\/LoginUseCase.swift",
+      "id" : "Session",
+      "kind" : "class",
+      "lines" : [
+        3,
+        6
+      ],
+      "name" : "Session",
+      "properties" : [
+        {
+          "name" : "token",
+          "type" : "String"
+        },
+        {
+          "name" : "userId",
+          "type" : "Int"
+        }
+      ],
+      "swift_kind" : "struct"
+    },
+    {
+      "file" : "Domain\/LoginUseCase.swift",
+      "functions" : [
+        {
+          "name" : "login",
+          "signature" : "func login(email: String, password: String) async throws -> Session"
+        },
+        {
+          "name" : "logout",
+          "signature" : "func logout() async throws"
+        }
+      ],
+      "id" : "AuthRepository",
+      "kind" : "interface",
+      "lines" : [
+        8,
+        11
+      ],
+      "name" : "AuthRepository",
+      "role" : "repository",
+      "swift_kind" : "protocol"
+    },
+    {
+      "constructor" : [
+        {
+          "name" : "repository",
+          "type" : "AuthRepository"
+        }
+      ],
+      "doc" : "Coordinates a login attempt against the configured AuthRepository.",
+      "file" : "Domain\/LoginUseCase.swift",
+      "functions" : [
+        {
+          "name" : "invoke",
+          "signature" : "func invoke(email: String, password: String) async throws -> Session"
+        }
+      ],
+      "id" : "LoginUseCase",
+      "kind" : "class",
+      "lines" : [
+        14,
+        24
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "LoginUseCase",
+      "properties" : [
+        {
+          "name" : "repository",
+          "type" : "AuthRepository",
+          "visibility" : "private"
+        }
+      ],
+      "role" : "usecase",
+      "swift_kind" : "class"
+    },
+    {
+      "constructor" : [
+        {
+          "name" : "assembly",
+          "type" : "LoginAssembly"
+        }
+      ],
+      "doc" : "Pushes the login flow's screens and hands control back once it's done.",
+      "file" : "UI\/LoginCoordinator.swift",
+      "functions" : [
+        {
+          "name" : "start",
+          "signature" : "func start()"
+        }
+      ],
+      "id" : "LoginCoordinator",
+      "kind" : "class",
+      "lines" : [
+        4,
+        12
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "LoginCoordinator",
+      "properties" : [
+        {
+          "name" : "assembly",
+          "type" : "LoginAssembly",
+          "visibility" : "private"
+        }
+      ],
+      "role" : "coordinator",
+      "swift_kind" : "class"
+    },
+    {
+      "file" : "UI\/LoginView.swift",
+      "id" : "LoginView",
+      "kind" : "class",
+      "lines" : [
+        3,
+        12
+      ],
+      "name" : "LoginView",
+      "properties" : [
+        {
+          "annotations" : [
+            "ObservedObject"
+          ],
+          "mutable" : true,
+          "name" : "viewModel",
+          "type" : "LoginViewModel"
+        },
+        {
+          "mutable" : true,
+          "name" : "onLoggedIn",
+          "type" : "() -> Void"
+        },
+        {
+          "mutable" : true,
+          "name" : "body",
+          "type" : "some View"
+        }
+      ],
+      "role" : "composable",
+      "supertypes" : [
+        "View"
+      ],
+      "swift_kind" : "struct"
+    },
+    {
+      "file" : "UI\/LoginView.swift",
+      "id" : "LoginForm",
+      "kind" : "class",
+      "lines" : [
+        14,
+        21
+      ],
+      "name" : "LoginForm",
+      "properties" : [
+        {
+          "name" : "state",
+          "type" : "LoginUiState"
+        },
+        {
+          "mutable" : true,
+          "name" : "onSubmit",
+          "type" : "(String, String) -> Void"
+        },
+        {
+          "mutable" : true,
+          "name" : "body",
+          "type" : "some View"
+        }
+      ],
+      "role" : "composable",
+      "supertypes" : [
+        "View"
+      ],
+      "swift_kind" : "struct"
+    },
+    {
+      "constructor" : [
+        {
+          "name" : "useCase",
+          "type" : "LoginUseCase"
+        }
+      ],
+      "doc" : "Coordinates the login flow and exposes state to the view.",
+      "file" : "UI\/LoginViewModel.swift",
+      "functions" : [
+        {
+          "doc" : "Launches the login attempt with the given credentials.",
+          "name" : "submit",
+          "signature" : "func submit(email: String, password: String) async"
+        }
+      ],
+      "id" : "LoginViewModel",
+      "kind" : "class",
+      "lines" : [
+        5,
+        24
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "LoginViewModel",
+      "properties" : [
+        {
+          "annotations" : [
+            "Published"
+          ],
+          "mutable" : true,
+          "name" : "state",
+          "type" : "LoginUiState"
+        },
+        {
+          "name" : "useCase",
+          "type" : "LoginUseCase",
+          "visibility" : "private"
+        }
+      ],
+      "role" : "viewmodel",
+      "supertypes" : [
+        "ObservableObject"
+      ],
+      "swift_kind" : "class"
+    },
+    {
+      "file" : "UI\/LoginViewModel.swift",
+      "id" : "LoginUiState",
+      "kind" : "class",
+      "lines" : [
+        26,
+        31
+      ],
+      "name" : "LoginUiState",
+      "swift_kind" : "enum"
+    }
+  ],
+  "schema" : "module-map\/1",
+  "sources" : {
+    "ast" : {
+      "files" : 6,
+      "parser" : "swift-syntax"
+    }
+  }
+}

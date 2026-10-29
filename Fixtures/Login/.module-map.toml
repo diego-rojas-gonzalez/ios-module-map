@@ -1,0 +1,6 @@
+# Example override for an iOS-specific role that has no Kotlin analog.
+# See android-module-map's README (Configuration section) for the full
+# set of keys this file supports — module-diagrams reads it unchanged.
+
+[layers.by_role]
+coordinator = "Presentation"
