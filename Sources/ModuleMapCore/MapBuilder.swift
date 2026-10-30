@@ -8,6 +8,20 @@ private let skipTypes: Set<String> = [
     "CGFloat", "NSObject", "Error", "Character", "Array", "Dictionary", "Set", "Optional"
 ]
 
+/// Where one declaration lives, for cross-module edge resolution.
+public struct GlobalEntry {
+    public let module: String
+    public let id: String
+    public init(module: String, id: String) {
+        self.module = module
+        self.id = id
+    }
+}
+/// Simple type name -> every module that declares it. Built once across all
+/// modules of a run (see main.swift) so a reference to a sibling module's
+/// type resolves to `origin: "project"` instead of a guessed "library".
+public typealias GlobalRegistry = [String: [GlobalEntry]]
+
 /// Strips Optional/force-unwrap sigils and generic wrappers down to a single
 /// best-guess type name. Syntactic only — same tradeoff as the rest of this tool.
 public func baseTypeName(_ raw: String) -> String {
@@ -29,19 +43,35 @@ private func isGraphWorthy(_ typeName: String) -> Bool {
     !typeName.isEmpty && !typeName.contains("->") && !typeName.contains(" ") && !typeName.contains("(")
 }
 
-public func buildEdgesAndExternals(nodes: [[String: Any]]) -> (edges: [[String: Any]], externals: [[String: Any]]) {
+public func buildEdgesAndExternals(
+    nodes: [[String: Any]], registry: GlobalRegistry = [:], currentModule: String = ""
+) -> (edges: [[String: Any]], externals: [[String: Any]]) {
     var localIds: [String: String] = [:]
     for n in nodes {
         if let name = n["name"] as? String, let id = n["id"] as? String { localIds[name] = id }
     }
 
     var edges: [[String: Any]] = []
-    var externalsByName: [String: [String: Any]] = [:]
+    var externalsById: [String: [String: Any]] = [:]
 
-    func targetId(for name: String) -> String { localIds[name] ?? name }
-    func registerExternalIfNeeded(_ name: String) {
-        guard localIds[name] == nil, externalsByName[name] == nil else { return }
-        externalsByName[name] = ["id": name, "name": name, "origin": "library"]
+    // Local (same module) wins outright. Otherwise, a name declared in
+    // exactly one other module resolves there (`origin: "project"`); an
+    // ambiguous name (declared in several modules) or one found nowhere
+    // falls back to `"library"` — a guessed cross-module link is worse
+    // than none, same "missing arrow > false arrow" rule the Kotlin tool
+    // documents for its own codegraph edge validation.
+    func resolve(_ name: String) -> (id: String, external: [String: Any]?) {
+        if let localId = localIds[name] { return (localId, nil) }
+        if let entries = registry[name], entries.count == 1, let entry = entries.first, entry.module != currentModule {
+            return (entry.id, ["id": entry.id, "name": name, "origin": "project", "module": entry.module])
+        }
+        return (name, ["id": name, "name": name, "origin": "library"])
+    }
+
+    func targetId(for name: String) -> String {
+        let (id, external) = resolve(name)
+        if let external, externalsById[id] == nil { externalsById[id] = external }
+        return id
     }
 
     for node in nodes {
@@ -55,7 +85,6 @@ public func buildEdgesAndExternals(nodes: [[String: Any]]) -> (edges: [[String: 
         for (idx, raw) in supertypes.enumerated() {
             let base = baseTypeName(raw)
             if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
-            registerExternalIfNeeded(base)
             let edgeKind = (swiftKind == "class" && idx == 0) ? "extends" : "implements"
             edges.append([
                 "from": fromId, "to": targetId(for: base), "kind": edgeKind,
@@ -68,7 +97,6 @@ public func buildEdgesAndExternals(nodes: [[String: Any]]) -> (edges: [[String: 
                 guard let rawType = param["type"] as? String, let pname = param["name"] as? String else { continue }
                 let base = baseTypeName(rawType)
                 if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
-                registerExternalIfNeeded(base)
                 edges.append([
                     "from": fromId, "to": targetId(for: base), "kind": "depends_on",
                     "provenance": ["ast"], "weight": 1,
@@ -82,15 +110,33 @@ public func buildEdgesAndExternals(nodes: [[String: Any]]) -> (edges: [[String: 
                 guard let rawType = prop["type"] as? String else { continue }
                 let base = baseTypeName(rawType)
                 if skipTypes.contains(base) || !isGraphWorthy(base) || base == (node["name"] as? String ?? "") { continue }
-                registerExternalIfNeeded(base)
                 edges.append([
                     "from": fromId, "to": targetId(for: base), "kind": "uses_type",
                     "provenance": ["ast"], "weight": 1
                 ])
             }
         }
+
+        if let calls = node["_calls"] as? [[String: Any]] {
+            for call in calls {
+                guard let rawType = call["type"] as? String, let fn = call["function"] as? String,
+                      let method = call["method"] as? String else { continue }
+                let base = baseTypeName(rawType)
+                if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
+                // module_diagrams.py's flow/sequence builders read `from`/`to`
+                // as the caller/callee *function* names (not node ids) and an
+                // optional `line` to order a sequence trace.
+                var detail: [String: Any] = ["from": fn, "to": method]
+                if let line = call["line"] as? Int { detail["line"] = line }
+                edges.append([
+                    "from": fromId, "to": targetId(for: base), "kind": "calls",
+                    "provenance": ["ast"], "weight": 1,
+                    "details": [detail]
+                ])
+            }
+        }
     }
-    return (edges, Array(externalsByName.values))
+    return (edges, Array(externalsById.values))
 }
 
 private let legend: [String: Any] = [
@@ -99,30 +145,41 @@ private let legend: [String: Any] = [
         "implements": "protocol conformance",
         "depends_on": "collaborator received through an initializer parameter",
         "uses_type": "the type appears in a stored property",
-        "calls": "reserved — not extracted in this version (needs a call-graph index)",
+        "calls": "a method is called on self, a property, or an init parameter — resolved by the receiver's declared type, same rule as android-module-map's codegraph edge validation",
         "instantiates": "reserved — not extracted in this version"
     ],
     "provenance": [
         "ast": "read from the module's syntax tree (swift-syntax)"
     ],
-    "external_nodes.origin": "this version marks every unresolved type as \"library\" — it does not yet cross-reference other modules to tell project types apart from framework ones",
+    "external_nodes.origin": "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",
     "weight": "number of aggregated occurrences on the edge",
     "visibility": "if absent, the declaration is internal (Swift's default)"
 ]
 
-public func buildModuleMap(moduleName: String, moduleDir: String, parsed: [ParsedFile], includeTimestamp: Bool) -> [String: Any] {
-    let allNodes = parsed.flatMap { $0.nodes }
-    let (edges, externals) = buildEdgesAndExternals(nodes: allNodes)
+public func buildModuleMap(
+    moduleName: String, moduleDir: String, parsed: [ParsedFile], includeTimestamp: Bool,
+    registry: GlobalRegistry = [:], allModules: [String] = []
+) -> [String: Any] {
+    let rawNodes = parsed.flatMap { $0.nodes }
+    let (edges, externals) = buildEdgesAndExternals(nodes: rawNodes, registry: registry, currentModule: moduleName)
+    let publicNodes = rawNodes.map { node -> [String: Any] in
+        var n = node
+        n.removeValue(forKey: "_calls")
+        return n
+    }
 
     var map: [String: Any] = [
         "schema": "module-map/1",
         "legend": legend,
         "module": ["name": moduleName, "dir": moduleDir, "type": "spm-or-folder"],
         "sources": ["ast": ["parser": "swift-syntax", "files": parsed.count]],
-        "nodes": allNodes,
+        "nodes": publicNodes,
         "external_nodes": externals,
         "edges": edges
     ]
+    if !allModules.isEmpty {
+        map["project"] = ["modules": allModules.sorted()]
+    }
     if includeTimestamp {
         map["generated_at"] = ISO8601DateFormatter().string(from: Date())
     }

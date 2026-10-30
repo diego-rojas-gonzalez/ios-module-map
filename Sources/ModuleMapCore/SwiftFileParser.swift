@@ -11,17 +11,45 @@ public struct ParsedFile {
     }
 }
 
+/// Collects `receiver.method(...)` call sites inside a function body — the
+/// same "declared type of the receiver" rule android-module-map's edge
+/// validation uses, just applied at AST time instead of needing a separate
+/// call-graph index: self/property/param calls only, so a missing edge is
+/// preferred over a guessed one.
+private final class CallCollector: SyntaxVisitor {
+    private(set) var calls: [(receiver: String, method: String, line: Int)] = []
+    private let converter: SourceLocationConverter
+
+    init(converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: .sourceAccurate)
+    }
+
+    override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
+        if let member = node.calledExpression.as(MemberAccessExprSyntax.self) {
+            var receiver = member.base?.trimmedDescription ?? "self"
+            if receiver.hasPrefix("self.") { receiver.removeFirst("self.".count) }
+            let line = node.startLocation(converter: converter).line
+            calls.append((receiver: receiver, method: member.declName.baseName.text, line: line))
+        }
+        return .visitChildren
+    }
+}
+
 /// Parses one Swift file and extracts top-level and nested type declarations,
 /// the same shape module_map.py extracts from Kotlin: kind, name, file, lines,
-/// supertypes, functions, properties, constructor, role.
+/// supertypes, functions, properties, constructor, role, plus `_calls`
+/// (consumed by MapBuilder.swift, stripped before the JSON is written).
 /// Syntactic only (no type-checking), same limitation the Kotlin tool documents.
 final class DeclVisitor: SyntaxVisitor {
     private(set) var result = ParsedFile()
+    private let moduleName: String
     private let relativePath: String
     private let converter: SourceLocationConverter
     private var parentStack: [String] = []
 
-    init(relativePath: String, tree: SourceFileSyntax) {
+    init(moduleName: String, relativePath: String, tree: SourceFileSyntax) {
+        self.moduleName = moduleName
         self.relativePath = relativePath
         self.converter = SourceLocationConverter(fileName: relativePath, tree: tree)
         super.init(viewMode: .sourceAccurate)
@@ -65,27 +93,20 @@ final class DeclVisitor: SyntaxVisitor {
 
     private func extractMembers(_ members: MemberBlockItemListSyntax) -> (
         functions: [[String: Any]], properties: [[String: Any]],
-        constructor: [[String: Any]]?, constructorAnnotations: [String]
+        constructor: [[String: Any]]?, constructorAnnotations: [String],
+        calls: [[String: Any]]
     ) {
         var functions: [[String: Any]] = []
         var properties: [[String: Any]] = []
         var constructor: [[String: Any]]? = nil
         var constructorAnnotations: [String] = []
+        var functionDecls: [FunctionDeclSyntax] = []
 
+        // Pass 1: properties + constructor, so every self-member's declared
+        // type is known before pass 2 resolves calls made from functions
+        // that may be declared earlier in the file than their collaborators.
         for item in members {
-            if let fn = item.decl.as(FunctionDeclSyntax.self) {
-                let mods = modifierNames(fn.modifiers)
-                var entry: [String: Any] = [
-                    "name": fn.name.text,
-                    "signature": (mods + ["func " + fn.name.text + fn.signature.trimmedDescription])
-                        .joined(separator: " ")
-                ]
-                let attrs = attributeNames(fn.attributes)
-                if !attrs.isEmpty { entry["annotations"] = attrs }
-                if mods.contains("static") || mods.contains("class") { entry["static"] = true }
-                if let doc = docComment(from: fn.leadingTrivia) { entry["doc"] = doc }
-                functions.append(entry)
-            } else if let v = item.decl.as(VariableDeclSyntax.self) {
+            if let v = item.decl.as(VariableDeclSyntax.self) {
                 let mods = modifierNames(v.modifiers)
                 let isVar = v.bindingSpecifier.text == "var"
                 let propertyAttrs = attributeNames(v.attributes)
@@ -105,14 +126,51 @@ final class DeclVisitor: SyntaxVisitor {
                     let name = p.secondName?.text ?? p.firstName.text
                     return ["name": name, "type": p.type.trimmedDescription]
                 }
-                // Prefer the richest initializer when several are declared.
                 if constructor == nil || params.count > (constructor?.count ?? 0) {
                     constructor = params
                     constructorAnnotations = attributeNames(initDecl.attributes)
                 }
+            } else if let fn = item.decl.as(FunctionDeclSyntax.self) {
+                functionDecls.append(fn)
             }
         }
-        return (functions, properties, constructor, constructorAnnotations)
+
+        var selfMemberTypes: [String: String] = [:]
+        for prop in properties {
+            if let n = prop["name"] as? String, let t = prop["type"] as? String { selfMemberTypes[n] = t }
+        }
+        if let constructor {
+            for param in constructor {
+                if let n = param["name"] as? String, let t = param["type"] as? String { selfMemberTypes[n] = t }
+            }
+        }
+
+        var calls: [[String: Any]] = []
+        for fn in functionDecls {
+            let mods = modifierNames(fn.modifiers)
+            var entry: [String: Any] = [
+                "name": fn.name.text,
+                "signature": (mods + ["func " + fn.name.text + fn.signature.trimmedDescription])
+                    .joined(separator: " ")
+            ]
+            let attrs = attributeNames(fn.attributes)
+            if !attrs.isEmpty { entry["annotations"] = attrs }
+            if mods.contains("static") || mods.contains("class") { entry["static"] = true }
+            if let doc = docComment(from: fn.leadingTrivia) { entry["doc"] = doc }
+            functions.append(entry)
+
+            guard let body = fn.body else { continue }
+            let collector = CallCollector(converter: converter)
+            collector.walk(body)
+            for call in collector.calls {
+                guard let targetType = selfMemberTypes[call.receiver] else { continue }
+                calls.append([
+                    "function": fn.name.text, "type": targetType, "method": call.method, "line": call.line
+                ])
+            }
+        }
+
+        return (functions, properties, constructor, constructorAnnotations, calls)
     }
 
     private func buildNode(
@@ -120,7 +178,7 @@ final class DeclVisitor: SyntaxVisitor {
         attributes: AttributeListSyntax, inheritance: InheritanceClauseSyntax?,
         members: MemberBlockItemListSyntax, node: some SyntaxProtocol
     ) -> [String: Any] {
-        let fqn = (parentStack + [name]).joined(separator: ".")
+        let fqn = ([moduleName] + parentStack + [name]).joined(separator: ".")
         // module_diagrams.py only recognizes Kotlin's own kind vocabulary
         // (class/interface/object/function) to decide what belongs in the
         // layer diagram and the class table. Map Swift's richer kinds onto
@@ -135,7 +193,7 @@ final class DeclVisitor: SyntaxVisitor {
             "file": relativePath,
             "lines": lines(of: node)
         ]
-        if let parent = parentStack.last { entry["parent"] = parent }
+        if !parentStack.isEmpty { entry["parent"] = ([moduleName] + parentStack).joined(separator: ".") }
 
         let mods = modifierNames(modifiers)
         if !mods.isEmpty { entry["modifiers"] = mods }
@@ -149,11 +207,14 @@ final class DeclVisitor: SyntaxVisitor {
         let supertypes = inheritance?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
         if !supertypes.isEmpty { entry["supertypes"] = supertypes }
 
-        let (functions, properties, constructor, ctorAnnotations) = extractMembers(members)
+        let (functions, properties, constructor, ctorAnnotations, calls) = extractMembers(members)
         if !functions.isEmpty { entry["functions"] = functions }
         if !properties.isEmpty { entry["properties"] = properties }
         if let constructor { entry["constructor"] = constructor }
         if !ctorAnnotations.isEmpty { entry["constructor_annotations"] = ctorAnnotations }
+        // Internal only — MapBuilder.swift turns these into top-level `calls`
+        // edges and strips this key before the JSON is written.
+        if !calls.isEmpty { entry["_calls"] = calls }
 
         if let role = inferRole(name: name, kind: kind, supertypes: supertypes) {
             entry["role"] = role
@@ -225,10 +286,10 @@ final class DeclVisitor: SyntaxVisitor {
     override func visitPost(_ node: ExtensionDeclSyntax) { parentStack.removeLast() }
 }
 
-public func parseSwiftFile(at path: String, relativePath: String) throws -> ParsedFile {
+public func parseSwiftFile(at path: String, relativePath: String, moduleName: String) throws -> ParsedFile {
     let source = try String(contentsOfFile: path, encoding: .utf8)
     let tree = Parser.parse(source: source)
-    let visitor = DeclVisitor(relativePath: relativePath, tree: tree)
+    let visitor = DeclVisitor(moduleName: moduleName, relativePath: relativePath, tree: tree)
     visitor.walk(tree)
     return visitor.result
 }

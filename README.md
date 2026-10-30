@@ -61,9 +61,23 @@ type-checking, same tradeoff `android-module-map` makes for Kotlin):
 - **edges**, from what's visible in the syntax alone: `extends` (a class's
   first inherited type), `implements` (protocol conformances), `depends_on`
   (initializer parameters — the common constructor-injection pattern),
-  `uses_type` (stored property types). No `calls`/`instantiates` yet — that
-  needs a call-graph index, the same gap the Kotlin tool has without
-  `codegraph`.
+  `uses_type` (stored property types), and **`calls`** — `receiver.method(...)`
+  inside a function body, resolved through the receiver's declared type (a
+  property, constructor param, or `self`), the same "declared type of the
+  receiver" rule `android-module-map`'s own edge validation uses. This is
+  what feeds `module_diagrams.py`'s flow and sequence diagrams — e.g.
+  `LoginViewModel.submit` → `LoginUseCase.invoke` → `AuthRepository.login` in
+  `Fixtures/Login`. No `instantiates` yet. A call through a local variable or
+  a chained expression (`foo().bar()`) isn't resolved — only self members —
+  so a flow can be missing a hop, never show a wrong one.
+- **`id`s are module-qualified** (`Login.LoginUseCase`, not just
+  `LoginUseCase`) and **cross-module references resolve to `origin:
+  "project"`** when a run covers more than one module (point `module-map-ios`
+  at a `Package.swift` root, or at a parent folder holding several — see
+  `Fixtures/MultiModule/`). A type declared in more than one module with the
+  same simple name is ambiguous and falls back to `"library"` rather than
+  guessing; a type genuinely outside this run (framework, external SPM
+  package) does too.
 
 ## Extending the role → layer mapping
 
@@ -87,16 +101,23 @@ python3 path/to/android-module-map/scripts/module_diagrams.py \
     Fixtures/Login/docs/architecture/Login.module-map.json -o /tmp/out
 ```
 
+[`Fixtures/MultiModule/`](Fixtures/MultiModule/) is a smaller, two-target
+`Package.swift` (`Core`, `Feature` depending on it) demonstrating cross-module
+resolution: `swift run module-map-ios Fixtures/MultiModule --no-timestamp`
+and check `Feature.module-map.json` — `NetworkClient` resolves to
+`external_nodes[].origin: "project"` with `module: "Core"`, not `"library"`.
+
 ## Limitations
 
 > Known boundaries for this first version — not bugs.
 
 - **Syntactic only** — no type-checking, so a name collision between two
   locally-declared types with the same simple name isn't disambiguated.
-- **No cross-module resolution** — every type not declared in the module
-  being parsed is marked `external_nodes[].origin: "library"`, even when
-  it's actually another module of the same app. The Kotlin tool tells these
-  apart by cross-referencing Gradle; this version doesn't yet.
+- **`calls` only resolves self/property/param receivers** — a call through a
+  local variable, a static/type-level call (`Foo.bar()`), or a chained
+  expression isn't captured. Enough for the DI-driven chains that matter for
+  flow diagrams (ViewModel → UseCase → Repository → API); not a full
+  call graph.
 - **`Package.swift` read by regex** — target names and `Sources/<name>`
   paths only; no manifest execution, so custom target `path:` overrides or
   plugin-generated targets aren't seen. Same tradeoff as the Kotlin tool

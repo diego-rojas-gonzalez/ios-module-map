@@ -1,0 +1,123 @@
+{
+  "edges" : [
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "client",
+          "via" : "init"
+        }
+      ],
+      "from" : "Feature.ProfileRepository",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Core.NetworkClient",
+      "weight" : 1
+    },
+    {
+      "from" : "Feature.ProfileRepository",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Core.NetworkClient",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "load",
+          "line" : 12,
+          "to" : "fetch"
+        }
+      ],
+      "from" : "Feature.ProfileRepository",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Core.NetworkClient",
+      "weight" : 1
+    }
+  ],
+  "external_nodes" : [
+    {
+      "id" : "Core.NetworkClient",
+      "module" : "Core",
+      "name" : "NetworkClient",
+      "origin" : "project"
+    }
+  ],
+  "legend" : {
+    "edge_kinds" : {
+      "calls" : "a method is called on self, a property, or an init parameter — resolved by the receiver's declared type, same rule as android-module-map's codegraph edge validation",
+      "depends_on" : "collaborator received through an initializer parameter",
+      "extends" : "subclass of (superclass only, first inherited type on a class)",
+      "implements" : "protocol conformance",
+      "instantiates" : "reserved — not extracted in this version",
+      "uses_type" : "the type appears in a stored property"
+    },
+    "external_nodes.origin" : "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",
+    "provenance" : {
+      "ast" : "read from the module's syntax tree (swift-syntax)"
+    },
+    "visibility" : "if absent, the declaration is internal (Swift's default)",
+    "weight" : "number of aggregated occurrences on the edge"
+  },
+  "module" : {
+    "dir" : "Sources\/Feature",
+    "name" : "Feature",
+    "type" : "spm-or-folder"
+  },
+  "nodes" : [
+    {
+      "constructor" : [
+        {
+          "name" : "client",
+          "type" : "NetworkClient"
+        }
+      ],
+      "file" : "Sources\/Feature\/ProfileRepository.swift",
+      "functions" : [
+        {
+          "name" : "load",
+          "signature" : "func load()"
+        }
+      ],
+      "id" : "Feature.ProfileRepository",
+      "kind" : "class",
+      "lines" : [
+        4,
+        14
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "ProfileRepository",
+      "properties" : [
+        {
+          "name" : "client",
+          "type" : "NetworkClient",
+          "visibility" : "private"
+        }
+      ],
+      "role" : "repository",
+      "swift_kind" : "class"
+    }
+  ],
+  "project" : {
+    "modules" : [
+      "Core",
+      "Feature"
+    ]
+  },
+  "schema" : "module-map\/1",
+  "sources" : {
+    "ast" : {
+      "files" : 1,
+      "parser" : "swift-syntax"
+    }
+  }
+}

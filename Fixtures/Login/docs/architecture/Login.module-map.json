@@ -1,21 +1,21 @@
 {
   "edges" : [
     {
-      "from" : "SessionStore",
+      "from" : "Login.SessionStore",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "Session",
+      "to" : "Login.Session",
       "weight" : 1
     },
     {
-      "from" : "AuthRepositoryImpl",
+      "from" : "Login.AuthRepositoryImpl",
       "kind" : "extends",
       "provenance" : [
         "ast"
       ],
-      "to" : "AuthRepository",
+      "to" : "Login.AuthRepository",
       "weight" : 1
     },
     {
@@ -26,12 +26,12 @@
           "via" : "init"
         }
       ],
-      "from" : "AuthRepositoryImpl",
+      "from" : "Login.AuthRepositoryImpl",
       "kind" : "depends_on",
       "provenance" : [
         "ast"
       ],
-      "to" : "AuthAPI",
+      "to" : "Login.AuthAPI",
       "weight" : 1
     },
     {
@@ -42,30 +42,78 @@
           "via" : "init"
         }
       ],
-      "from" : "AuthRepositoryImpl",
+      "from" : "Login.AuthRepositoryImpl",
       "kind" : "depends_on",
       "provenance" : [
         "ast"
       ],
-      "to" : "SessionStore",
+      "to" : "Login.SessionStore",
       "weight" : 1
     },
     {
-      "from" : "AuthRepositoryImpl",
+      "from" : "Login.AuthRepositoryImpl",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "AuthAPI",
+      "to" : "Login.AuthAPI",
       "weight" : 1
     },
     {
-      "from" : "AuthRepositoryImpl",
+      "from" : "Login.AuthRepositoryImpl",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "SessionStore",
+      "to" : "Login.SessionStore",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "login",
+          "line" : 29,
+          "to" : "login"
+        }
+      ],
+      "from" : "Login.AuthRepositoryImpl",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.AuthAPI",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "login",
+          "line" : 31,
+          "to" : "save"
+        }
+      ],
+      "from" : "Login.AuthRepositoryImpl",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.SessionStore",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "logout",
+          "line" : 36,
+          "to" : "clear"
+        }
+      ],
+      "from" : "Login.AuthRepositoryImpl",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.SessionStore",
       "weight" : 1
     },
     {
@@ -76,21 +124,37 @@
           "via" : "init"
         }
       ],
-      "from" : "LoginUseCase",
+      "from" : "Login.LoginUseCase",
       "kind" : "depends_on",
       "provenance" : [
         "ast"
       ],
-      "to" : "AuthRepository",
+      "to" : "Login.AuthRepository",
       "weight" : 1
     },
     {
-      "from" : "LoginUseCase",
+      "from" : "Login.LoginUseCase",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "AuthRepository",
+      "to" : "Login.AuthRepository",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "invoke",
+          "line" : 22,
+          "to" : "login"
+        }
+      ],
+      "from" : "Login.LoginUseCase",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.AuthRepository",
       "weight" : 1
     },
     {
@@ -101,25 +165,25 @@
           "via" : "init"
         }
       ],
-      "from" : "LoginCoordinator",
+      "from" : "Login.LoginCoordinator",
       "kind" : "depends_on",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginAssembly",
+      "to" : "Login.LoginAssembly",
       "weight" : 1
     },
     {
-      "from" : "LoginCoordinator",
+      "from" : "Login.LoginCoordinator",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginAssembly",
+      "to" : "Login.LoginAssembly",
       "weight" : 1
     },
     {
-      "from" : "LoginView",
+      "from" : "Login.LoginView",
       "kind" : "implements",
       "provenance" : [
         "ast"
@@ -128,16 +192,16 @@
       "weight" : 1
     },
     {
-      "from" : "LoginView",
+      "from" : "Login.LoginView",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginViewModel",
+      "to" : "Login.LoginViewModel",
       "weight" : 1
     },
     {
-      "from" : "LoginForm",
+      "from" : "Login.LoginForm",
       "kind" : "implements",
       "provenance" : [
         "ast"
@@ -146,16 +210,16 @@
       "weight" : 1
     },
     {
-      "from" : "LoginForm",
+      "from" : "Login.LoginForm",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginUiState",
+      "to" : "Login.LoginUiState",
       "weight" : 1
     },
     {
-      "from" : "LoginViewModel",
+      "from" : "Login.LoginViewModel",
       "kind" : "extends",
       "provenance" : [
         "ast"
@@ -171,30 +235,46 @@
           "via" : "init"
         }
       ],
-      "from" : "LoginViewModel",
+      "from" : "Login.LoginViewModel",
       "kind" : "depends_on",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginUseCase",
+      "to" : "Login.LoginUseCase",
       "weight" : 1
     },
     {
-      "from" : "LoginViewModel",
+      "from" : "Login.LoginViewModel",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginUiState",
+      "to" : "Login.LoginUiState",
       "weight" : 1
     },
     {
-      "from" : "LoginViewModel",
+      "from" : "Login.LoginViewModel",
       "kind" : "uses_type",
       "provenance" : [
         "ast"
       ],
-      "to" : "LoginUseCase",
+      "to" : "Login.LoginUseCase",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "submit",
+          "line" : 18,
+          "to" : "invoke"
+        }
+      ],
+      "from" : "Login.LoginViewModel",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.LoginUseCase",
       "weight" : 1
     }
   ],
@@ -212,14 +292,14 @@
   ],
   "legend" : {
     "edge_kinds" : {
-      "calls" : "reserved — not extracted in this version (needs a call-graph index)",
+      "calls" : "a method is called on self, a property, or an init parameter — resolved by the receiver's declared type, same rule as android-module-map's codegraph edge validation",
       "depends_on" : "collaborator received through an initializer parameter",
       "extends" : "subclass of (superclass only, first inherited type on a class)",
       "implements" : "protocol conformance",
       "instantiates" : "reserved — not extracted in this version",
       "uses_type" : "the type appears in a stored property"
     },
-    "external_nodes.origin" : "this version marks every unresolved type as \"library\" — it does not yet cross-reference other modules to tell project types apart from framework ones",
+    "external_nodes.origin" : "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",
     "provenance" : {
       "ast" : "read from the module's syntax tree (swift-syntax)"
     },
@@ -241,7 +321,7 @@
           "signature" : "func resolveLoginUseCase(api: AuthAPI) -> LoginUseCase"
         }
       ],
-      "id" : "LoginAssembly",
+      "id" : "Login.LoginAssembly",
       "kind" : "class",
       "lines" : [
         4,
@@ -262,7 +342,7 @@
           "signature" : "func login(email: String, password: String) async throws -> (token: String, userId: Int)"
         }
       ],
-      "id" : "AuthAPI",
+      "id" : "Login.AuthAPI",
       "kind" : "interface",
       "lines" : [
         3,
@@ -284,7 +364,7 @@
           "signature" : "func clear()"
         }
       ],
-      "id" : "SessionStore",
+      "id" : "Login.SessionStore",
       "kind" : "class",
       "lines" : [
         7,
@@ -326,7 +406,7 @@
           "signature" : "func logout() async throws"
         }
       ],
-      "id" : "AuthRepositoryImpl",
+      "id" : "Login.AuthRepositoryImpl",
       "kind" : "class",
       "lines" : [
         19,
@@ -356,7 +436,7 @@
     },
     {
       "file" : "Domain\/LoginUseCase.swift",
-      "id" : "Session",
+      "id" : "Login.Session",
       "kind" : "class",
       "lines" : [
         3,
@@ -387,7 +467,7 @@
           "signature" : "func logout() async throws"
         }
       ],
-      "id" : "AuthRepository",
+      "id" : "Login.AuthRepository",
       "kind" : "interface",
       "lines" : [
         8,
@@ -412,7 +492,7 @@
           "signature" : "func invoke(email: String, password: String) async throws -> Session"
         }
       ],
-      "id" : "LoginUseCase",
+      "id" : "Login.LoginUseCase",
       "kind" : "class",
       "lines" : [
         14,
@@ -447,7 +527,7 @@
           "signature" : "func start()"
         }
       ],
-      "id" : "LoginCoordinator",
+      "id" : "Login.LoginCoordinator",
       "kind" : "class",
       "lines" : [
         4,
@@ -469,7 +549,7 @@
     },
     {
       "file" : "UI\/LoginView.swift",
-      "id" : "LoginView",
+      "id" : "Login.LoginView",
       "kind" : "class",
       "lines" : [
         3,
@@ -504,7 +584,7 @@
     },
     {
       "file" : "UI\/LoginView.swift",
-      "id" : "LoginForm",
+      "id" : "Login.LoginForm",
       "kind" : "class",
       "lines" : [
         14,
@@ -549,7 +629,7 @@
           "signature" : "func submit(email: String, password: String) async"
         }
       ],
-      "id" : "LoginViewModel",
+      "id" : "Login.LoginViewModel",
       "kind" : "class",
       "lines" : [
         5,
@@ -582,7 +662,7 @@
     },
     {
       "file" : "UI\/LoginViewModel.swift",
-      "id" : "LoginUiState",
+      "id" : "Login.LoginUiState",
       "kind" : "class",
       "lines" : [
         26,
@@ -592,6 +672,11 @@
       "swift_kind" : "enum"
     }
   ],
+  "project" : {
+    "modules" : [
+      "Login"
+    ]
+  },
   "schema" : "module-map\/1",
   "sources" : {
     "ast" : {

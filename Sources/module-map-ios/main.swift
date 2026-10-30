@@ -34,6 +34,14 @@ while i < args.count {
 let root = URL(fileURLWithPath: inputPath).standardizedFileURL
 let modules = discoverModules(root: root)
 
+// Pass 1: parse every module first, so edge resolution (pass 2) can tell a
+// reference to a sibling module's type ("project") apart from one that
+// matches nothing in this run ("library") — needed even for a single-module
+// run so `calls`/`depends_on` edges can resolve against that module's own
+// freshly-parsed nodes before anything is written.
+var parsedByModule: [String: [ParsedFile]] = [:]
+var registry: GlobalRegistry = [:]
+
 for module in modules {
     let files = swiftFiles(in: module.dir)
     log("\(module.name): parsing \(files.count) files...")
@@ -42,17 +50,33 @@ for module in modules {
     for file in files {
         let relative = file.path.replacingOccurrences(of: root.path + "/", with: "")
         do {
-            let parsed = try parseSwiftFile(at: file.path, relativePath: relative)
+            let parsed = try parseSwiftFile(at: file.path, relativePath: relative, moduleName: module.name)
             parsedFiles.append(parsed)
         } catch {
             log("warning: could not parse \(relative): \(error)")
         }
     }
+    parsedByModule[module.name] = parsedFiles
 
+    for file in parsedFiles {
+        for node in file.nodes {
+            guard let name = node["name"] as? String, let id = node["id"] as? String else { continue }
+            registry[name, default: []].append(GlobalEntry(module: module.name, id: id))
+        }
+    }
+}
+
+let allModuleNames = modules.map { $0.name }
+
+// Pass 2: build and write each module's map now that the registry covers
+// every module discovered in this run.
+for module in modules {
+    let parsedFiles = parsedByModule[module.name] ?? []
     let relativeModuleDir = module.dir.path.replacingOccurrences(of: root.path + "/", with: "")
     let map = buildModuleMap(
         moduleName: module.name, moduleDir: relativeModuleDir,
-        parsed: parsedFiles, includeTimestamp: includeTimestamp
+        parsed: parsedFiles, includeTimestamp: includeTimestamp,
+        registry: registry, allModules: allModuleNames
     )
 
     let nodeCount = (map["nodes"] as? [[String: Any]])?.count ?? 0
