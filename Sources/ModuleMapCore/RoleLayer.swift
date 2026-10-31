@@ -7,17 +7,23 @@ import Foundation
 public func inferRole(
     name: String, kind: String, supertypes: [String], annotations: [String] = []
 ) -> String? {
-    let supers = Set(supertypes)
-    let attrs = Set(annotations)
+    // "supertypes" here is Swift's own inheritance-clause vocabulary: a
+    // single list holding both the superclass (classes only) and every
+    // protocol conformance, same as the `supertypes` JSON field this
+    // ultimately feeds — see MapBuilder.swift's `extends`/`implements` split
+    // for where the two get told apart.
+    let supertypeNames = Set(supertypes)
+    let annotationNames = Set(annotations)
 
-    // MVI/TCA vocabulary — checked first and against both `supers` and
-    // `attrs` because the macro form (`@Reducer struct Feature { ... }`)
-    // adds the `Reducer` conformance via an invisible extension: the
-    // explicit `: Reducer`/`: ReducerProtocol` never appears in the source
-    // this tool actually parses, only the attribute does. None of these
-    // have a Kotlin analog (same situation as "coordinator"), so they stay
-    // iOS-specific — see .module-map.toml's [layers.by_role] override.
-    if attrs.contains("Reducer") || supers.contains("Reducer") || supers.contains("ReducerProtocol") {
+    // MVI/TCA vocabulary — checked first and against both `supertypeNames`
+    // and `annotationNames` because the macro form (`@Reducer struct Feature
+    // { ... }`) adds the `Reducer` conformance via an invisible extension:
+    // the explicit `: Reducer`/`: ReducerProtocol` never appears in the
+    // source this tool actually parses, only the attribute does. None of
+    // these have a Kotlin analog (same situation as "coordinator"), so they
+    // stay iOS-specific — see .module-map.toml's [layers.by_role] override.
+    if annotationNames.contains("Reducer") || supertypeNames.contains("Reducer")
+        || supertypeNames.contains("ReducerProtocol") {
         return "reducer"
     }
     if name.hasSuffix("Reducer") { return "reducer" }
@@ -27,7 +33,7 @@ public func inferRole(
     // sight, and TCA's own `Store`/`StoreOf<Feature>` is rarely subclassed by
     // user code — it's consumed as a property type, not redeclared. Require
     // an explicit, intentional conformance instead.
-    if supers.contains("Store") { return "store" }
+    if supertypeNames.contains("Store") { return "store" }
     if kind == "enum" && (name.hasSuffix("Action") || name.hasSuffix("Intent")) { return "action" }
     if name.hasSuffix("State") && (kind == "struct" || kind == "enum") { return "state" }
     if name.hasSuffix("Effect") || name.hasSuffix("Middleware") { return "effect" }
@@ -37,13 +43,13 @@ public func inferRole(
     // Kotlin/Android) already place these in the right layer with no extra
     // config. "coordinator" has no Kotlin analog, so it stays iOS-specific —
     // see .module-map.toml's [layers.by_role] override for it.
-    if supers.contains("UIViewController") || name.hasSuffix("ViewController") {
+    if supertypeNames.contains("UIViewController") || name.hasSuffix("ViewController") {
         return "activity"
     }
-    if supers.contains("View") || name.hasSuffix("Screen") {
+    if supertypeNames.contains("View") || name.hasSuffix("Screen") {
         return "composable"
     }
-    if name.hasSuffix("ViewModel") || supers.contains("ObservableObject") {
+    if name.hasSuffix("ViewModel") || supertypeNames.contains("ObservableObject") {
         return "viewmodel"
     }
     if name.hasSuffix("UseCase") || name.hasSuffix("Interactor") {
@@ -90,6 +96,15 @@ private let roleLayers: [String: String] = [
     "effect": "Domain"
 ]
 
+// NOT called from main.swift/MapBuilder.swift — the written JSON never
+// carries a "layer" field, only "role". The real layer placement happens
+// downstream, in module_diagrams.py, from its own Kotlin-calibrated
+// defaults plus whatever `.module-map.toml` [layers.by_role] overrides it
+// (see Fixtures/Login/.module-map.toml, Fixtures/MVIFeature/.module-map.toml
+// — module-map-ios itself never reads that file). `inferLayer` mirrors that
+// external logic for the test suite below; keep it in sync with
+// module_diagrams.py's defaults if those ever change, but changing it alone
+// has no effect on this tool's own output.
 public func inferLayer(filePath: String, role: String?) -> String {
     let segments = filePath.lowercased().split(separator: "/").map(String.init)
     for segment in segments {

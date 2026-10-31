@@ -152,13 +152,18 @@ final class DeclVisitor: SyntaxVisitor {
             }
         }
 
-        var selfMemberTypes: [String: String] = [:]
+        // Every name whose declared type is known without type-checking —
+        // a stored property or a constructor param — so CallCollector's
+        // `receiver.method()` sites below can resolve `receiver`'s type by
+        // the same "declared type of the receiver" rule android-module-map's
+        // own edge validation uses (see MapBuilder.swift's `calls` edge).
+        var receiverDeclaredTypes: [String: String] = [:]
         for prop in properties {
-            if let n = prop["name"] as? String, let t = prop["type"] as? String { selfMemberTypes[n] = t }
+            if let n = prop["name"] as? String, let t = prop["type"] as? String { receiverDeclaredTypes[n] = t }
         }
         if let constructor {
             for param in constructor {
-                if let n = param["name"] as? String, let t = param["type"] as? String { selfMemberTypes[n] = t }
+                if let n = param["name"] as? String, let t = param["type"] as? String { receiverDeclaredTypes[n] = t }
             }
         }
 
@@ -180,7 +185,7 @@ final class DeclVisitor: SyntaxVisitor {
             let collector = CallCollector(converter: converter)
             collector.walk(body)
             for call in collector.calls {
-                guard let targetType = selfMemberTypes[call.receiver] else { continue }
+                guard let targetType = receiverDeclaredTypes[call.receiver] else { continue }
                 calls.append([
                     "function": fn.name.text, "type": targetType, "method": call.method, "line": call.line
                 ])

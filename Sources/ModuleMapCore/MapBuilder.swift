@@ -1,8 +1,10 @@
 import Foundation
 
-/// Swift types too common to be worth a graph edge — the equivalent of the
-/// Kotlin tool quietly ignoring kotlin.* / java.lang.* collaborators.
-private let skipTypes: Set<String> = [
+/// Swift types too common to count as a real collaborator — the equivalent
+/// of the Kotlin tool quietly ignoring kotlin.* / java.lang.* collaborators.
+/// Named after the domain term the JSON legend itself uses for `depends_on`
+/// ("collaborator received through an initializer parameter").
+private let nonCollaboratorTypes: Set<String> = [
     "String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "Double", "Float",
     "Bool", "Void", "Any", "AnyObject", "Self", "Data", "URL", "Date", "UUID",
     "CGFloat", "NSObject", "Error", "Character", "Array", "Dictionary", "Set", "Optional"
@@ -84,7 +86,7 @@ public func buildEdgesAndExternals(
         let supertypes = node["supertypes"] as? [String] ?? []
         for (idx, raw) in supertypes.enumerated() {
             let base = baseTypeName(raw)
-            if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
+            if nonCollaboratorTypes.contains(base) || !isGraphWorthy(base) { continue }
             let edgeKind = (swiftKind == "class" && idx == 0) ? "extends" : "implements"
             edges.append([
                 "from": fromId, "to": targetId(for: base), "kind": edgeKind,
@@ -96,7 +98,7 @@ public func buildEdgesAndExternals(
             for param in ctor {
                 guard let rawType = param["type"] as? String, let pname = param["name"] as? String else { continue }
                 let base = baseTypeName(rawType)
-                if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
+                if nonCollaboratorTypes.contains(base) || !isGraphWorthy(base) { continue }
                 edges.append([
                     "from": fromId, "to": targetId(for: base), "kind": "depends_on",
                     "provenance": ["ast"], "weight": 1,
@@ -109,7 +111,7 @@ public func buildEdgesAndExternals(
             for prop in props {
                 guard let rawType = prop["type"] as? String else { continue }
                 let base = baseTypeName(rawType)
-                if skipTypes.contains(base) || !isGraphWorthy(base) || base == (node["name"] as? String ?? "") { continue }
+                if nonCollaboratorTypes.contains(base) || !isGraphWorthy(base) || base == (node["name"] as? String ?? "") { continue }
                 edges.append([
                     "from": fromId, "to": targetId(for: base), "kind": "uses_type",
                     "provenance": ["ast"], "weight": 1
@@ -122,7 +124,7 @@ public func buildEdgesAndExternals(
                 guard let rawType = call["type"] as? String, let fn = call["function"] as? String,
                       let method = call["method"] as? String else { continue }
                 let base = baseTypeName(rawType)
-                if skipTypes.contains(base) || !isGraphWorthy(base) { continue }
+                if nonCollaboratorTypes.contains(base) || !isGraphWorthy(base) { continue }
                 // module_diagrams.py's flow/sequence builders read `from`/`to`
                 // as the caller/callee *function* names (not node ids) and an
                 // optional `line` to order a sequence trace.
