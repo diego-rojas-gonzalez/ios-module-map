@@ -661,6 +661,30 @@
       "swift_kind" : "class"
     },
     {
+      "cases" : [
+        {
+          "name" : "idle"
+        },
+        {
+          "name" : "loading"
+        },
+        {
+          "associated_values" : [
+            {
+              "type" : "Session"
+            }
+          ],
+          "name" : "success"
+        },
+        {
+          "associated_values" : [
+            {
+              "type" : "String"
+            }
+          ],
+          "name" : "error"
+        }
+      ],
       "file" : "UI\/LoginViewModel.swift",
       "id" : "Login.LoginUiState",
       "kind" : "class",
@@ -669,6 +693,7 @@
         31
       ],
       "name" : "LoginUiState",
+      "role" : "state",
       "swift_kind" : "enum"
     }
   ],

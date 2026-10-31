@@ -1,0 +1,9 @@
+# Example override for MVI/TCA-style roles that have no Kotlin analog —
+# same mechanism as Fixtures/Login/.module-map.toml for `coordinator`.
+# module-diagrams reads this unchanged; module-map-ios never parses it.
+
+[layers.by_role]
+reducer = "Presentation"
+state = "Presentation"
+action = "Presentation"
+effect = "Domain"

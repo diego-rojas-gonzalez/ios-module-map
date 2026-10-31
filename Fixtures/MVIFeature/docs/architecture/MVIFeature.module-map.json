@@ -1,0 +1,247 @@
+{
+  "edges" : [
+    {
+      "from" : "MVIFeature.CounterState",
+      "kind" : "implements",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Equatable",
+      "weight" : 1
+    },
+    {
+      "from" : "MVIFeature.CounterReducer",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "MVIFeature.CounterClient",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "di" : true,
+          "name" : "client",
+          "via" : "init"
+        }
+      ],
+      "from" : "MVIFeature.CounterEffect",
+      "kind" : "depends_on",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "MVIFeature.CounterClient",
+      "weight" : 1
+    },
+    {
+      "from" : "MVIFeature.CounterEffect",
+      "kind" : "uses_type",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "MVIFeature.CounterClient",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "fetchFace",
+          "line" : 40,
+          "to" : "fetchFace"
+        }
+      ],
+      "from" : "MVIFeature.CounterEffect",
+      "kind" : "calls",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "MVIFeature.CounterClient",
+      "weight" : 1
+    }
+  ],
+  "external_nodes" : [
+    {
+      "id" : "Equatable",
+      "name" : "Equatable",
+      "origin" : "library"
+    }
+  ],
+  "legend" : {
+    "edge_kinds" : {
+      "calls" : "a method is called on self, a property, or an init parameter — resolved by the receiver's declared type, same rule as android-module-map's codegraph edge validation",
+      "depends_on" : "collaborator received through an initializer parameter",
+      "extends" : "subclass of (superclass only, first inherited type on a class)",
+      "implements" : "protocol conformance",
+      "instantiates" : "reserved — not extracted in this version",
+      "uses_type" : "the type appears in a stored property"
+    },
+    "external_nodes.origin" : "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",
+    "provenance" : {
+      "ast" : "read from the module's syntax tree (swift-syntax)"
+    },
+    "visibility" : "if absent, the declaration is internal (Swift's default)",
+    "weight" : "number of aggregated occurrences on the edge"
+  },
+  "module" : {
+    "dir" : "\/Users\/astralcollar\/AndroidStudioProjects\/ios-module-map\/Fixtures\/MVIFeature",
+    "name" : "MVIFeature",
+    "type" : "spm-or-folder"
+  },
+  "nodes" : [
+    {
+      "file" : "CounterFeature.swift",
+      "id" : "MVIFeature.CounterState",
+      "kind" : "class",
+      "lines" : [
+        3,
+        6
+      ],
+      "name" : "CounterState",
+      "properties" : [
+        {
+          "mutable" : true,
+          "name" : "count",
+          "type" : "Int"
+        },
+        {
+          "mutable" : true,
+          "name" : "isLoading",
+          "type" : "Bool"
+        }
+      ],
+      "role" : "state",
+      "supertypes" : [
+        "Equatable"
+      ],
+      "swift_kind" : "struct"
+    },
+    {
+      "cases" : [
+        {
+          "name" : "increment"
+        },
+        {
+          "name" : "decrement"
+        },
+        {
+          "associated_values" : [
+            {
+              "type" : "Int"
+            }
+          ],
+          "name" : "faceResponse"
+        },
+        {
+          "associated_values" : [
+            {
+              "name" : "isLoading",
+              "type" : "Bool"
+            }
+          ],
+          "name" : "setLoading"
+        }
+      ],
+      "file" : "CounterFeature.swift",
+      "id" : "MVIFeature.CounterAction",
+      "kind" : "class",
+      "lines" : [
+        8,
+        13
+      ],
+      "name" : "CounterAction",
+      "role" : "action",
+      "swift_kind" : "enum"
+    },
+    {
+      "annotations" : [
+        "Reducer"
+      ],
+      "file" : "CounterFeature.swift",
+      "functions" : [
+        {
+          "name" : "reduce",
+          "signature" : "func reduce(into state: inout CounterState, action: CounterAction)"
+        }
+      ],
+      "id" : "MVIFeature.CounterReducer",
+      "kind" : "class",
+      "lines" : [
+        15,
+        31
+      ],
+      "name" : "CounterReducer",
+      "properties" : [
+        {
+          "name" : "api",
+          "type" : "CounterClient"
+        }
+      ],
+      "role" : "reducer",
+      "swift_kind" : "struct"
+    },
+    {
+      "constructor" : [
+        {
+          "name" : "client",
+          "type" : "CounterClient"
+        }
+      ],
+      "file" : "CounterFeature.swift",
+      "functions" : [
+        {
+          "name" : "fetchFace",
+          "signature" : "func fetchFace() -> Int"
+        }
+      ],
+      "id" : "MVIFeature.CounterEffect",
+      "kind" : "class",
+      "lines" : [
+        33,
+        42
+      ],
+      "modifiers" : [
+        "final"
+      ],
+      "name" : "CounterEffect",
+      "properties" : [
+        {
+          "name" : "client",
+          "type" : "CounterClient"
+        }
+      ],
+      "role" : "effect",
+      "swift_kind" : "class"
+    },
+    {
+      "file" : "CounterFeature.swift",
+      "functions" : [
+        {
+          "name" : "fetchFace",
+          "signature" : "func fetchFace() -> Int"
+        }
+      ],
+      "id" : "MVIFeature.CounterClient",
+      "kind" : "interface",
+      "lines" : [
+        44,
+        46
+      ],
+      "name" : "CounterClient",
+      "role" : "api_service",
+      "swift_kind" : "protocol"
+    }
+  ],
+  "project" : {
+    "modules" : [
+      "MVIFeature"
+    ]
+  },
+  "schema" : "module-map\/1",
+  "sources" : {
+    "ast" : {
+      "files" : 1,
+      "parser" : "swift-syntax"
+    }
+  }
+}

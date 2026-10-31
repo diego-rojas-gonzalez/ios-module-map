@@ -94,13 +94,17 @@ final class DeclVisitor: SyntaxVisitor {
     private func extractMembers(_ members: MemberBlockItemListSyntax) -> (
         functions: [[String: Any]], properties: [[String: Any]],
         constructor: [[String: Any]]?, constructorAnnotations: [String],
-        calls: [[String: Any]]
+        calls: [[String: Any]], cases: [[String: Any]]
     ) {
         var functions: [[String: Any]] = []
         var properties: [[String: Any]] = []
         var constructor: [[String: Any]]? = nil
         var constructorAnnotations: [String] = []
         var functionDecls: [FunctionDeclSyntax] = []
+        // `Action`/`Intent`/`State` enums carry their real shape in cases, not
+        // in functions/properties — an MVI enum with no `case`s extracted
+        // would otherwise write an empty, useless node.
+        var cases: [[String: Any]] = []
 
         // Pass 1: properties + constructor, so every self-member's declared
         // type is known before pass 2 resolves calls made from functions
@@ -132,6 +136,19 @@ final class DeclVisitor: SyntaxVisitor {
                 }
             } else if let fn = item.decl.as(FunctionDeclSyntax.self) {
                 functionDecls.append(fn)
+            } else if let caseDecl = item.decl.as(EnumCaseDeclSyntax.self) {
+                for element in caseDecl.elements {
+                    var entry: [String: Any] = ["name": element.name.text]
+                    if let params = element.parameterClause?.parameters, !params.isEmpty {
+                        entry["associated_values"] = params.map { p -> [String: Any] in
+                            var av: [String: Any] = ["type": p.type.trimmedDescription]
+                            if let label = (p.secondName ?? p.firstName)?.text { av["name"] = label }
+                            return av
+                        }
+                    }
+                    if let raw = element.rawValue?.value.trimmedDescription { entry["raw_value"] = raw }
+                    cases.append(entry)
+                }
             }
         }
 
@@ -170,7 +187,7 @@ final class DeclVisitor: SyntaxVisitor {
             }
         }
 
-        return (functions, properties, constructor, constructorAnnotations, calls)
+        return (functions, properties, constructor, constructorAnnotations, calls, cases)
     }
 
     private func buildNode(
@@ -207,16 +224,17 @@ final class DeclVisitor: SyntaxVisitor {
         let supertypes = inheritance?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
         if !supertypes.isEmpty { entry["supertypes"] = supertypes }
 
-        let (functions, properties, constructor, ctorAnnotations, calls) = extractMembers(members)
+        let (functions, properties, constructor, ctorAnnotations, calls, cases) = extractMembers(members)
         if !functions.isEmpty { entry["functions"] = functions }
         if !properties.isEmpty { entry["properties"] = properties }
         if let constructor { entry["constructor"] = constructor }
         if !ctorAnnotations.isEmpty { entry["constructor_annotations"] = ctorAnnotations }
+        if !cases.isEmpty { entry["cases"] = cases }
         // Internal only — MapBuilder.swift turns these into top-level `calls`
         // edges and strips this key before the JSON is written.
         if !calls.isEmpty { entry["_calls"] = calls }
 
-        if let role = inferRole(name: name, kind: kind, supertypes: supertypes) {
+        if let role = inferRole(name: name, kind: kind, supertypes: supertypes, annotations: attrs) {
             entry["role"] = role
         }
         return entry

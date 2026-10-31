@@ -42,7 +42,9 @@ type-checking, same tradeoff `android-module-map` makes for Kotlin):
 
 - declaration shape: supertypes/conformances, stored properties, functions
   (signature as text), the richest `init` as `constructor`, attributes,
-  doc comments (`///`)
+  doc comments (`///`), and an enum's `cases` (name, labeled associated
+  values, raw value) — the real shape of an MVI `Action`/`Intent`/`State`
+  enum, which otherwise extracts as an empty, useless node
 - **role**, inferred by name/conformance — reusing Kotlin's own vocabulary
   wherever there's a direct analog, so `module_diagrams.py`'s built-in
   by-role layer defaults already place these correctly:
@@ -57,6 +59,11 @@ type-checking, same tradeoff `android-module-map` makes for Kotlin):
   | `*Service`, `*Client`, `*API`/`*Api` | `api_service` | Retrofit API |
   | `*Assembly`, `*Container`, `*Resolver`, `*Factory` | `di_module` | Hilt module |
   | `*Coordinator` | `coordinator` | *(no Kotlin analog — see below)* |
+  | `*Reducer`, `@Reducer`/conforms `Reducer`/`ReducerProtocol` (TCA) | `reducer` | *(no Kotlin analog — see below)* |
+  | enum `*Action`/`*Intent` | `action` | *(no Kotlin analog — see below)* |
+  | `*State` (struct or enum) | `state` | *(no Kotlin analog — see below)* |
+  | `*Effect`, `*Middleware` | `effect` | *(no Kotlin analog — see below)* |
+  | explicit `: Store` conformance (not bare `*Store` name — too common for plain caches) | `store` | *(no Kotlin analog — see below)* |
 
 - **edges**, from what's visible in the syntax alone: `extends` (a class's
   first inherited type), `implements` (protocol conformances), `depends_on`
@@ -81,17 +88,25 @@ type-checking, same tradeoff `android-module-map` makes for Kotlin):
 
 ## Extending the role → layer mapping
 
-`coordinator` has no Kotlin equivalent, so `module_diagrams.py`'s built-in
-defaults don't know where it belongs — drop a `.module-map.toml` next to the
-module (same mechanism `android-module-map`'s README documents):
+`coordinator` (and, same reasoning, the MVI/TCA roles `reducer`/`state`/
+`action`/`effect`/`store`) has no Kotlin equivalent, so `module_diagrams.py`'s
+built-in defaults don't know where any of them belong — drop a
+`.module-map.toml` next to the module (same mechanism `android-module-map`'s
+README documents; `module-map-ios` itself never reads this file, it's
+`module_diagrams.py` that does):
 
 ```toml
 [layers.by_role]
 coordinator = "Presentation"
+reducer = "Presentation"
+state = "Presentation"
+action = "Presentation"
+effect = "Domain"
 ```
 
-See [`Fixtures/Login/.module-map.toml`](Fixtures/Login/.module-map.toml) for
-a working example, and `Fixtures/Login/` in general for a small worked
+See [`Fixtures/Login/.module-map.toml`](Fixtures/Login/.module-map.toml) and
+[`Fixtures/MVIFeature/.module-map.toml`](Fixtures/MVIFeature/.module-map.toml)
+for working examples, and `Fixtures/Login/` in general for a small worked
 feature (Domain/Data/UI/DI) that exercises the whole pipeline — regenerate it
 with:
 
@@ -106,6 +121,12 @@ python3 path/to/android-module-map/scripts/module_diagrams.py \
 resolution: `swift run module-map-ios Fixtures/MultiModule --no-timestamp`
 and check `Feature.module-map.json` — `NetworkClient` resolves to
 `external_nodes[].origin: "project"` with `module: "Core"`, not `"library"`.
+
+[`Fixtures/MVIFeature/`](Fixtures/MVIFeature/) is a small TCA-shaped feature
+(`@Reducer` struct with no explicit `: Reducer` conformance, an `Action` enum
+with associated values, a `State` struct, an `Effect` depending on a client
+protocol) demonstrating the MVI roles and `cases` extraction:
+`swift run module-map-ios Fixtures/MVIFeature --no-timestamp`.
 
 ## Limitations
 
@@ -136,6 +157,19 @@ and check `Feature.module-map.json` — `NetworkClient` resolves to
   though `swift build`/`swift run` work fine. `Tests/` is written against
   Swift Testing (`import Testing`, `@Test`), ready for whenever Xcode is
   present.
+- **Reducer composition is invisible** — `var body: some ReducerOf<Self> {
+  Scope(...) { Child() }; Reduce { ... } }` is a computed property; its
+  type (`some ReducerOf<Self>`) ends up as `uses_type` noise and the
+  `Scope`/`CombineReducers` composition inside the closure isn't walked, so
+  a parent↔child reducer relationship produces no edge.
+- **Property-wrapper dependencies without an explicit type annotation don't
+  get an edge** — `@Dependency(\.apiClient) var apiClient` (type inferred
+  from the key path, no `: APIClient`) extracts no `type`, so no
+  `uses_type` edge. Give it an explicit annotation if the edge matters.
+- **No `handles`-style edge from `Action` case to `Reducer`** — the
+  `switch action { case .foo: ... }` pattern-match isn't a `receiver.method()`
+  call, so which reducer handles which action isn't captured as an edge yet;
+  the `cases` list on the `Action` node is the only signal for that today.
 
 ## What's next
 
