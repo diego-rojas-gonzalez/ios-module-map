@@ -352,6 +352,23 @@ against Swift Testing (`import Testing`, `@Test`), ready for whenever Xcode is p
 
 ---
 
+## 🤖 Claude Code Skill
+
+Use this as a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code) by cloning into
+your project's skills directory:
+
+```bash
+git clone https://github.com/diego-rojas-gonzalez/ios-module-map.git .claude/skills/module-map-ios
+```
+
+The skill builds and runs the extractor, then looks for `android-module-map`'s
+`module_diagrams.py` — as a sibling clone, as that project's own skill, or a path you give it — to
+render the Markdown/HTML, since this repo only produces the JSON. It then goes further: it
+verifies the edges listed under "review" against the source and describes types missing a doc
+comment.
+
+---
+
 ## ⚠️ Limitations
 
 > Known boundaries for this first version — not bugs.
