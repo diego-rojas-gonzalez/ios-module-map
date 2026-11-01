@@ -7,6 +7,20 @@ import Foundation
 public func inferRole(
     name: String, kind: String, supertypes: [String], annotations: [String] = []
 ) -> String? {
+    // An explicit `*Protocol` suffix is Swift's own naming convention for an
+    // interface counterpart to a same-named type (`FooRepositoryProtocol` as
+    // the interface, `class FooRepository` as the impl) — strip it and
+    // re-run the same suffix rules against the bare name, so
+    // `FooRepositoryProtocol` resolves to `repository` exactly like
+    // `FooRepository` already does, instead of falling through with no
+    // role at all (and no layer placement downstream).
+    if kind == "protocol", name.hasSuffix("Protocol"), name.count > "Protocol".count {
+        let stripped = String(name.dropLast("Protocol".count))
+        if let role = inferRole(name: stripped, kind: kind, supertypes: supertypes, annotations: annotations) {
+            return role
+        }
+    }
+
     // "supertypes" here is Swift's own inheritance-clause vocabulary: a
     // single list holding both the superclass (classes only) and every
     // protocol conformance, same as the `supertypes` JSON field this
@@ -62,7 +76,7 @@ public func inferRole(
         return "api_service"
     }
     if name.hasSuffix("Assembly") || name.hasSuffix("Container") || name.hasSuffix("DIModule")
-        || name.hasSuffix("Resolver") || name.hasSuffix("Factory") {
+        || name.hasSuffix("Resolver") || name.hasSuffix("Factory") || name.hasSuffix("Module") {
         return "di_module"
     }
     if name.hasSuffix("Coordinator") {

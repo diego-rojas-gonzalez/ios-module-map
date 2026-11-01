@@ -73,7 +73,7 @@
       "depends_on" : "collaborator received through an initializer parameter",
       "extends" : "subclass of (superclass only, first inherited type on a class)",
       "implements" : "protocol conformance",
-      "instantiates" : "reserved — not extracted in this version",
+      "instantiates" : "a type is constructed directly (`Type(...)`), recognized by Swift's own capitalized-type naming convention rather than a call-graph index",
       "uses_type" : "the type appears in a stored property"
     },
     "external_nodes.origin" : "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",

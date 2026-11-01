@@ -1,6 +1,51 @@
 {
   "edges" : [
     {
+      "details" : [
+        {
+          "from" : "resolveLoginUseCase",
+          "line" : 6
+        }
+      ],
+      "from" : "Login.LoginAssembly",
+      "kind" : "instantiates",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.SessionStore",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "resolveLoginUseCase",
+          "line" : 7
+        }
+      ],
+      "from" : "Login.LoginAssembly",
+      "kind" : "instantiates",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.AuthRepositoryImpl",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "resolveLoginUseCase",
+          "line" : 8
+        }
+      ],
+      "from" : "Login.LoginAssembly",
+      "kind" : "instantiates",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.LoginUseCase",
+      "weight" : 1
+    },
+    {
       "from" : "Login.SessionStore",
       "kind" : "uses_type",
       "provenance" : [
@@ -114,6 +159,21 @@
         "ast"
       ],
       "to" : "Login.SessionStore",
+      "weight" : 1
+    },
+    {
+      "details" : [
+        {
+          "from" : "login",
+          "line" : 30
+        }
+      ],
+      "from" : "Login.AuthRepositoryImpl",
+      "kind" : "instantiates",
+      "provenance" : [
+        "ast"
+      ],
+      "to" : "Login.Session",
       "weight" : 1
     },
     {
@@ -280,13 +340,13 @@
   ],
   "external_nodes" : [
     {
-      "id" : "View",
-      "name" : "View",
+      "id" : "ObservableObject",
+      "name" : "ObservableObject",
       "origin" : "library"
     },
     {
-      "id" : "ObservableObject",
-      "name" : "ObservableObject",
+      "id" : "View",
+      "name" : "View",
       "origin" : "library"
     }
   ],
@@ -296,7 +356,7 @@
       "depends_on" : "collaborator received through an initializer parameter",
       "extends" : "subclass of (superclass only, first inherited type on a class)",
       "implements" : "protocol conformance",
-      "instantiates" : "reserved — not extracted in this version",
+      "instantiates" : "a type is constructed directly (`Type(...)`), recognized by Swift's own capitalized-type naming convention rather than a call-graph index",
       "uses_type" : "the type appears in a stored property"
     },
     "external_nodes.origin" : "\"project\" = exactly one other module in this run declares the type; \"library\" = not found in this run (a framework, an external SPM package, or an ambiguous name declared in several modules)",
@@ -313,6 +373,23 @@
   },
   "nodes" : [
     {
+      "_instantiates" : [
+        {
+          "function" : "resolveLoginUseCase",
+          "line" : 6,
+          "type" : "SessionStore"
+        },
+        {
+          "function" : "resolveLoginUseCase",
+          "line" : 7,
+          "type" : "AuthRepositoryImpl"
+        },
+        {
+          "function" : "resolveLoginUseCase",
+          "line" : 8,
+          "type" : "LoginUseCase"
+        }
+      ],
       "doc" : "Wires the Login feature's dependency graph.",
       "file" : "DI\/LoginAssembly.swift",
       "functions" : [
@@ -385,6 +462,13 @@
       "swift_kind" : "class"
     },
     {
+      "_instantiates" : [
+        {
+          "function" : "login",
+          "line" : 30,
+          "type" : "Session"
+        }
+      ],
       "constructor" : [
         {
           "name" : "api",

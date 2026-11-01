@@ -11,13 +11,19 @@ public struct ParsedFile {
     }
 }
 
-/// Collects `receiver.method(...)` call sites inside a function body — the
-/// same "declared type of the receiver" rule android-module-map's edge
-/// validation uses, just applied at AST time instead of needing a separate
-/// call-graph index: self/property/param calls only, so a missing edge is
-/// preferred over a guessed one.
+/// Collects two kinds of call sites inside a function body:
+/// - `receiver.method(...)` — the same "declared type of the receiver" rule
+///   android-module-map's edge validation uses, just applied at AST time
+///   instead of needing a separate call-graph index: self/property/param
+///   calls only, so a missing edge is preferred over a guessed one.
+/// - `TypeName(...)` — a bare call whose callee is capitalized, Swift's own
+///   naming convention for a type. No type-checking needed: a capitalized
+///   identifier called like a function is, syntactically, always a direct
+///   construction (`Foo()`, or a SwiftUI view builder like `Text("hi")`,
+///   which is the same thing under the naming convention).
 private final class CallCollector: SyntaxVisitor {
     private(set) var calls: [(receiver: String, method: String, line: Int)] = []
+    private(set) var instantiations: [(type: String, line: Int)] = []
     private let converter: SourceLocationConverter
 
     init(converter: SourceLocationConverter) {
@@ -26,11 +32,16 @@ private final class CallCollector: SyntaxVisitor {
     }
 
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
+        let line = node.startLocation(converter: converter).line
         if let member = node.calledExpression.as(MemberAccessExprSyntax.self) {
             var receiver = member.base?.trimmedDescription ?? "self"
             if receiver.hasPrefix("self.") { receiver.removeFirst("self.".count) }
-            let line = node.startLocation(converter: converter).line
             calls.append((receiver: receiver, method: member.declName.baseName.text, line: line))
+        } else if let ref = node.calledExpression.as(DeclReferenceExprSyntax.self) {
+            let name = ref.baseName.text
+            if let first = name.first, first.isUppercase {
+                instantiations.append((type: name, line: line))
+            }
         }
         return .visitChildren
     }
@@ -38,9 +49,10 @@ private final class CallCollector: SyntaxVisitor {
 
 /// Parses one Swift file and extracts top-level and nested type declarations,
 /// the same shape module_map.py extracts from Kotlin: kind, name, file, lines,
-/// supertypes, functions, properties, constructor, role, plus `_calls`
-/// (consumed by MapBuilder.swift, stripped before the JSON is written).
-/// Syntactic only (no type-checking), same limitation the Kotlin tool documents.
+/// supertypes, functions, properties, constructor, role, plus `_calls` and
+/// `_instantiates` (consumed by MapBuilder.swift, stripped before the JSON is
+/// written). Syntactic only (no type-checking), same limitation the Kotlin
+/// tool documents.
 final class DeclVisitor: SyntaxVisitor {
     private(set) var result = ParsedFile()
     private let moduleName: String
@@ -94,7 +106,7 @@ final class DeclVisitor: SyntaxVisitor {
     private func extractMembers(_ members: MemberBlockItemListSyntax) -> (
         functions: [[String: Any]], properties: [[String: Any]],
         constructor: [[String: Any]]?, constructorAnnotations: [String],
-        calls: [[String: Any]], cases: [[String: Any]]
+        calls: [[String: Any]], instantiates: [[String: Any]], cases: [[String: Any]]
     ) {
         var functions: [[String: Any]] = []
         var properties: [[String: Any]] = []
@@ -168,6 +180,7 @@ final class DeclVisitor: SyntaxVisitor {
         }
 
         var calls: [[String: Any]] = []
+        var instantiates: [[String: Any]] = []
         for fn in functionDecls {
             let mods = modifierNames(fn.modifiers)
             var entry: [String: Any] = [
@@ -190,9 +203,12 @@ final class DeclVisitor: SyntaxVisitor {
                     "function": fn.name.text, "type": targetType, "method": call.method, "line": call.line
                 ])
             }
+            for instantiation in collector.instantiations {
+                instantiates.append(["function": fn.name.text, "type": instantiation.type, "line": instantiation.line])
+            }
         }
 
-        return (functions, properties, constructor, constructorAnnotations, calls, cases)
+        return (functions, properties, constructor, constructorAnnotations, calls, instantiates, cases)
     }
 
     private func buildNode(
@@ -229,15 +245,16 @@ final class DeclVisitor: SyntaxVisitor {
         let supertypes = inheritance?.inheritedTypes.map { $0.type.trimmedDescription } ?? []
         if !supertypes.isEmpty { entry["supertypes"] = supertypes }
 
-        let (functions, properties, constructor, ctorAnnotations, calls, cases) = extractMembers(members)
+        let (functions, properties, constructor, ctorAnnotations, calls, instantiates, cases) = extractMembers(members)
         if !functions.isEmpty { entry["functions"] = functions }
         if !properties.isEmpty { entry["properties"] = properties }
         if let constructor { entry["constructor"] = constructor }
         if !ctorAnnotations.isEmpty { entry["constructor_annotations"] = ctorAnnotations }
         if !cases.isEmpty { entry["cases"] = cases }
-        // Internal only — MapBuilder.swift turns these into top-level `calls`
-        // edges and strips this key before the JSON is written.
+        // Internal only — MapBuilder.swift turns these into top-level `calls`/
+        // `instantiates` edges and strips both keys before the JSON is written.
         if !calls.isEmpty { entry["_calls"] = calls }
+        if !instantiates.isEmpty { entry["_instantiates"] = instantiates }
 
         if let role = inferRole(name: name, kind: kind, supertypes: supertypes, annotations: attrs) {
             entry["role"] = role

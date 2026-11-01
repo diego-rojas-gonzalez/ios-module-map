@@ -42,3 +42,24 @@ import Testing
     #expect(inferRole(name: "SessionStore", kind: "class", supertypes: []) == nil)
     #expect(inferRole(name: "FeatureStore", kind: "class", supertypes: ["Store"]) == "store")
 }
+
+// Regression for a real --no-timestamp non-determinism bug: external_nodes
+// used to serialize in Dictionary.values order, which Swift's per-process
+// hash-seed randomization can reorder run to run on byte-identical source,
+// even though the externals *content* was always correct. Pin the output to
+// a sorted order so two runs on the same code are byte-identical, as the
+// README promises.
+@Test func externalNodesAreSortedByIdRegardlessOfInsertionOrder() {
+    let node: [String: Any] = [
+        "id": "Feature.Widget", "name": "Widget", "kind": "class", "swift_kind": "class",
+        "properties": [
+            ["name": "z", "type": "Zebra"],
+            ["name": "m", "type": "Mango"],
+            ["name": "a", "type": "Apple"],
+        ],
+    ]
+    let (_, externals) = buildEdgesAndExternals(nodes: [node])
+    let ids = externals.compactMap { $0["id"] as? String }
+    #expect(ids == ids.sorted())
+    #expect(ids == ["Apple", "Mango", "Zebra"])
+}

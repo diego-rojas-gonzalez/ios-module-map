@@ -99,6 +99,7 @@ extracted even though it has no Kotlin analog — see [What It Extracts](#-what-
 |---|---|---|
 | 🧠 | **Role inference** | Name, protocol conformance, *and* attribute (`@Reducer`) based — covers MVVM/Clean vocabulary (`viewmodel`, `usecase`, `repository`...) and MVI/TCA vocabulary (`reducer`, `state`, `action`, `effect`) |
 | 🔀 | **`calls` edges** | `receiver.method(...)` resolved through the receiver's declared type — the same rule `android-module-map`'s own edge validation uses, feeding flow/sequence diagrams downstream |
+| 🏗️ | **`instantiates` edges** | `TypeName(...)` recognized by Swift's capitalized-type naming convention — no call-graph index needed, feeding the layered diagram's "creates" arrow |
 | 🧬 | **Enum `cases` extraction** | Name, labeled associated values, raw value — so an `Action`/`Intent`/`State` enum isn't just an empty node |
 | 🔗 | **Cross-module resolution** | Point it at a `Package.swift` root (or a folder holding several modules) and a sibling module's type resolves to `origin: "project"` instead of a guessed `"library"` |
 | 📦 | **SPM-aware** | A folder is one module; a folder with `Package.swift` turns every target into its own module |
@@ -228,7 +229,7 @@ For every `class`/`struct`/`enum`/`protocol` (syntactic only — no type-checkin
   | `*UseCase`, `*Interactor` | `usecase` | UseCase |
   | `*Repository`, `*RepositoryImpl` | `repository` | Repository |
   | `*Service`, `*Client`, `*API`/`*Api` | `api_service` | Retrofit API |
-  | `*Assembly`, `*Container`, `*Resolver`, `*Factory` | `di_module` | Hilt module |
+  | `*Assembly`, `*Container`, `*Resolver`, `*Factory`, `*Module` | `di_module` | Hilt module |
   | `*Coordinator` | `coordinator` | *(none — see [Configuration](#%EF%B8%8F-configuration))* |
   | `*Reducer`, `@Reducer`/conforms `Reducer`/`ReducerProtocol` (TCA) | `reducer` | *(none — see [Configuration](#%EF%B8%8F-configuration))* |
   | enum `*Action`/`*Intent` | `action` | *(none — see [Configuration](#%EF%B8%8F-configuration))* |
@@ -236,16 +237,29 @@ For every `class`/`struct`/`enum`/`protocol` (syntactic only — no type-checkin
   | `*Effect`, `*Middleware` | `effect` | *(none — see [Configuration](#%EF%B8%8F-configuration))* |
   | explicit `: Store` conformance (bare `*Store` name isn't enough — too common for plain caches) | `store` | *(none — see [Configuration](#%EF%B8%8F-configuration))* |
 
+  A `protocol` named with the explicit `*Protocol` suffix (`FooRepositoryProtocol`, the interface
+  counterpart to a same-named `class FooRepository`) has that suffix stripped before matching the
+  table above, so it resolves exactly like the bare name would (`repository`, `usecase`, ...)
+  instead of falling through with no role.
+
 - **edges**, from what's visible in the syntax alone: `extends` (a class's first inherited type),
   `implements` (protocol conformances), `depends_on` (initializer parameters — the common
-  constructor-injection pattern), `uses_type` (stored property types), and **`calls`** —
+  constructor-injection pattern), `uses_type` (stored property types), **`calls`** —
   `receiver.method(...)` inside a function body, resolved through the receiver's declared type (a
   property, constructor param, or `self`), the same "declared type of the receiver" rule
   `android-module-map`'s own edge validation uses. This is what feeds `module_diagrams.py`'s flow
   and sequence diagrams — e.g. `LoginViewModel.submit` → `LoginUseCase.invoke` →
-  `AuthRepository.login` in `Fixtures/Login`. No `instantiates` yet. A call through a local
-  variable or a chained expression (`foo().bar()`) isn't resolved — only self members — so a flow
-  can be missing a hop, never show a wrong one.
+  `AuthRepository.login` in `Fixtures/Login`. A call through a local variable or a chained
+  expression (`foo().bar()`) isn't resolved — only self members — so a flow can be missing a hop,
+  never show a wrong one.
+- and **`instantiates`** — `TypeName(...)` inside a function body, recognized by Swift's own
+  capitalized-type naming convention rather than a call-graph index (no type-checking needed: a
+  SwiftUI view builder like `Text("hi")` is, syntactically, the same thing as `Foo()`). Feeds
+  `module_diagrams.py`'s "creates" arrow in the layered diagram — e.g. `LoginAssembly` constructing
+  `SessionStore`/`AuthRepositoryImpl`/`LoginUseCase` in `Fixtures/Login`. An instantiation whose
+  target isn't drawn elsewhere in the same module (most framework/library construction) produces
+  no arrow rather than cluttering the diagram with `Text`/`VStack`-style noise — it still lands in
+  the JSON, just not in the picture.
 - **`id`s are module-qualified** (`Login.LoginUseCase`, not just `LoginUseCase`) and
   **cross-module references resolve to `origin: "project"`** when a run covers more than one
   module. A type declared in more than one module with the same simple name is ambiguous and
@@ -379,6 +393,10 @@ comment.
   static/type-level call (`Foo.bar()`), or a chained expression isn't captured. Enough for the
   DI-driven chains that matter for flow diagrams (ViewModel → UseCase → Repository → API); not a
   full call graph.
+- **`instantiates` is naming-convention based, not type-checked** — only a bare capitalized call
+  (`Foo(...)`) is seen; a static factory (`Foo.make()`), a lowercase builder function, or a type
+  behind a generic/opaque result isn't. A type that happens to start with a lowercase letter
+  (against convention) is invisible to this edge, same tradeoff `calls` makes for local variables.
 - **`Package.swift` read by regex** — target names and `Sources/<name>` paths only; no manifest
   execution, so custom target `path:` overrides or plugin-generated targets aren't seen. Same
   tradeoff as the Kotlin tool reading `build.gradle.kts` without running Gradle.

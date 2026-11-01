@@ -137,8 +137,36 @@ public func buildEdgesAndExternals(
                 ])
             }
         }
+
+        if let instantiates = node["_instantiates"] as? [[String: Any]] {
+            for instantiation in instantiates {
+                guard let rawType = instantiation["type"] as? String, let fn = instantiation["function"] as? String
+                else { continue }
+                let base = baseTypeName(rawType)
+                // A type constructing itself (a copy, a recursive builder) isn't a
+                // collaborator worth an arrow back to the same node.
+                if nonCollaboratorTypes.contains(base) || !isGraphWorthy(base) || base == (node["name"] as? String ?? "") {
+                    continue
+                }
+                var detail: [String: Any] = ["from": fn]
+                if let line = instantiation["line"] as? Int { detail["line"] = line }
+                edges.append([
+                    "from": fromId, "to": targetId(for: base), "kind": "instantiates",
+                    "provenance": ["ast"], "weight": 1,
+                    "details": [detail]
+                ])
+            }
+        }
     }
-    return (edges, Array(externalsById.values))
+    // Dictionary.values has no guaranteed order across process runs (Swift's
+    // hash seed is randomized per process), so two --no-timestamp runs on
+    // identical source could serialize external_nodes in a different order —
+    // breaking the "byte-identical, safe to diff in CI" promise. Sort by id
+    // for a stable, reproducible order.
+    let sortedExternals = Array(externalsById.values).sorted {
+        ($0["id"] as? String ?? "") < ($1["id"] as? String ?? "")
+    }
+    return (edges, sortedExternals)
 }
 
 private let legend: [String: Any] = [
@@ -148,7 +176,7 @@ private let legend: [String: Any] = [
         "depends_on": "collaborator received through an initializer parameter",
         "uses_type": "the type appears in a stored property",
         "calls": "a method is called on self, a property, or an init parameter — resolved by the receiver's declared type, same rule as android-module-map's codegraph edge validation",
-        "instantiates": "reserved — not extracted in this version"
+        "instantiates": "a type is constructed directly (`Type(...)`), recognized by Swift's own capitalized-type naming convention rather than a call-graph index"
     ],
     "provenance": [
         "ast": "read from the module's syntax tree (swift-syntax)"
